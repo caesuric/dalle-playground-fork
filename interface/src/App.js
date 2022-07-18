@@ -76,6 +76,10 @@ const App = ({ classes }) => {
     const [apiError, setApiError] = useState('')
     const [imagesPerQuery, setImagesPerQuery] = useState(2);
     const [queryTime, setQueryTime] = useState(0);
+    const [runTime, setRunTime] = useState(0);
+    const [lastNumImages, setLastNumImages] = useState(2);
+    const [percentageDone, setPercentageDone] = useState(0);
+    let startTime = new Date();
 
     const imagesPerQueryOptions = 10
     const validBackendUrl = isValidBackendEndpoint && backendUrl
@@ -83,8 +87,21 @@ const App = ({ classes }) => {
     function enterPressedCallback(promptText) {
         console.log('API call to DALL-E web service with the following prompt [' + promptText + ']');
         setApiError('')
+        startTime = new Date();
+        const timerUpdateCallback = setInterval(() => {
+            const currentTime = new Date();
+            const localRunTime = ((currentTime.getTime() - startTime.getTime()) / 1000).toFixed(1)
+            setRunTime(localRunTime);
+            let localPercentageDone = (localRunTime / queryTime * lastNumImages / imagesPerQuery * 100);
+            if (localPercentageDone > 100) localPercentageDone = 100;
+            if (queryTime !== 0) setPercentageDone(localPercentageDone.toFixed(2));
+        }, 100);
         setIsFetchingImgs(true)
         callDalleService(backendUrl, promptText, imagesPerQuery).then((response) => {
+            setRunTime(0);
+            clearInterval(timerUpdateCallback);
+            setLastNumImages(imagesPerQuery);
+            setPercentageDone(0);
             setQueryTime(response['executionTime'])
             setGeneratedImages(response['serverResponse']['generatedImgs'])
             setGeneratedImagesFormat(response['serverResponse']['generatedImgsFormat'])
@@ -174,6 +191,12 @@ const App = ({ classes }) => {
                     </Card>
                     {queryTime !== 0 && <Typography variant="body2" color="textSecondary">
                         Generation execution time: {queryTime} sec
+                    </Typography>}
+                    {runTime !== 0 && <Typography variant="body2" color="textSecondary">
+                        Runtime: {runTime} sec
+                    </Typography>}
+                    {percentageDone !== 0 && <Typography variant="body2" color="textSecondary">
+                        Est. Completion: {percentageDone}%
                     </Typography>}
                 </div>
                 
